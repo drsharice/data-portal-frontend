@@ -16,6 +16,10 @@ interface Preview {
   rows: Record<string, any>[];
 }
 
+const baseUrl = import.meta.env.DEV
+  ? "http://localhost:8000"
+  : "https://data-api-sharice-b3daawbufhemgaay.eastus2-01.azurewebsites.net"; // Replace with your real Azure FastAPI URL
+
 export default function Data() {
   useTitle("Data | Data Portal");
 
@@ -27,17 +31,17 @@ export default function Data() {
   const [err, setErr] = useState<string | null>(null);
 
   useEffect(() => {
-    fetch("http://localhost:8000/sources")
+    fetch(`${baseUrl}/sources`)
       .then((r) => r.json())
       .then((res) => {
-        const list: Dataset[] = (res.sources ?? []).map((s: string) => ({
+        const list = (res.sources ?? []).map((s: string) => ({
           key: s,
           label: s.replace(/_/g, " "),
         }));
         setViews(list);
       })
       .catch(() => {
-        const fallback: Dataset[] = [
+        const fallback = [
           "Bloomberg_User_ReportTable",
           "HR_Employees",
           "RightFax_Users",
@@ -45,23 +49,6 @@ export default function Data() {
         setViews(fallback);
       });
   }, []);
-
-  const filteredDatasets: Dataset[] = useMemo(() => {
-    const term = q.trim().toLowerCase();
-    return term ? views.filter((v) => v.label.toLowerCase().includes(term)) : views;
-  }, [q, views]);
-
-  const filteredRows = useMemo(() => {
-    if (!preview) return [];
-    const term = q.trim().toLowerCase();
-    return term
-      ? preview.rows.filter((row) =>
-          Object.values(row).some((val) =>
-            String(val).toLowerCase().includes(term)
-          )
-        )
-      : preview.rows;
-  }, [q, preview]);
 
   useEffect(() => {
     if (!selected) {
@@ -71,25 +58,44 @@ export default function Data() {
 
     setErr(null);
     setLoading(true);
-    fetch(`http://localhost:8000/data/${selected.key}?limit=100`)
+    fetch(`${baseUrl}/data/${selected.key}?limit=100`)
       .then((r) => r.json())
       .then((res) => {
         if (Array.isArray(res) && res.length > 0) {
-          const columns = Object.keys(res[0]).map((k) => ({ name: k }));
+          const first = res[0];
+          const columns = Object.keys(first).map((k) => ({ name: k }));
           setPreview({ view: selected.key, columns, rows: res });
         } else {
           setPreview({ view: selected.key, columns: [], rows: [] });
         }
-        setQ(""); // clear search on new table load
+        setQ(""); // reset search bar on new table load
       })
       .catch((e) => setErr(e?.message ?? String(e)))
       .finally(() => setLoading(false));
   }, [selected]);
 
+  const filteredDatasets = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    return term
+      ? views.filter((v) => v.label.toLowerCase().includes(term))
+      : views;
+  }, [q, views]);
+
+  const filteredRows = useMemo(() => {
+    const term = q.trim().toLowerCase();
+    if (!term || !preview) return preview?.rows ?? [];
+
+    return preview.rows.filter((row) =>
+      Object.values(row).some((val) =>
+        String(val).toLowerCase().includes(term)
+      )
+    );
+  }, [q, preview]);
+
   function downloadCsv() {
     if (!selected) return;
     const a = document.createElement("a");
-    a.href = `http://localhost:8000/data/${selected.key}/download`;
+    a.href = `${baseUrl}/data/${selected.key}/download`;
     a.download = `${selected.label.replace(/\W+/g, "_")}.csv`;
     document.body.appendChild(a);
     a.click();
@@ -112,11 +118,16 @@ export default function Data() {
             Datasets
           </button>
 
-          <form className="ml-auto flex items-center gap-2" onSubmit={(e) => e.preventDefault()}>
+          <form
+            className="ml-auto flex items-center gap-2"
+            onSubmit={(e) => e.preventDefault()}
+          >
             <input
               value={q}
               onChange={(e) => setQ(e.target.value)}
-              placeholder={selected ? "Search within table..." : 'Search datasets, e.g. "macro indicators"'}
+              placeholder={
+                selected ? "Search within table..." : 'Search datasets, e.g. "macro indicators"'
+              }
               className="w-[520px] rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm text-gray-900 outline-none focus:ring-2 focus:ring-red-600"
             />
             {q && (
@@ -159,7 +170,9 @@ export default function Data() {
                         <button
                           onClick={() => setSelected(v)}
                           className={`w-full rounded-xl border px-3 py-2 text-left text-sm ${
-                            active ? "border-red-600 bg-red-50" : "border-gray-200 bg-white hover:bg-gray-50"
+                            active
+                              ? "border-red-600 bg-red-50"
+                              : "border-gray-200 bg-white hover:bg-gray-50"
                           }`}
                         >
                           {v.label}
@@ -207,7 +220,9 @@ export default function Data() {
                         <thead className="sticky top-0 z-10 bg-gray-100">
                           <tr>
                             {preview.columns.map((c) => (
-                              <th key={c.name} className="border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">{c.name}</th>
+                              <th key={c.name} className="border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-700">
+                                {c.name}
+                              </th>
                             ))}
                           </tr>
                         </thead>
@@ -215,7 +230,9 @@ export default function Data() {
                           {filteredRows.map((r, i) => (
                             <tr key={i} className="odd:bg-white even:bg-gray-50">
                               {preview.columns.map((c) => (
-                                <td key={c.name} className="border-b border-gray-100 px-3 py-2">{formatCell(r[c.name])}</td>
+                                <td key={c.name} className="border-b border-gray-100 px-3 py-2">
+                                  {formatCell(r[c.name])}
+                                </td>
                               ))}
                             </tr>
                           ))}
