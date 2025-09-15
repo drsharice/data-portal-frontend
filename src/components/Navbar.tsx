@@ -34,7 +34,7 @@ function Navbar() {
             Data
           </NavLink>
           <NavLink
-            to="/api"
+            to="/apis"
             className={({ isActive }) =>
               `hover:text-yellow-400 ${
                 isActive ? "text-yellow-400 border-b-2 border-yellow-400" : ""

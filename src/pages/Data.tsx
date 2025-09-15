@@ -16,9 +16,11 @@ interface Preview {
   rows: Record<string, any>[];
 }
 
+
 const baseUrl = import.meta.env.DEV
   ? "http://localhost:8000"
-  : "https://data-api-sharice-b3daawbufhemgaay.eastus2-01.azurewebsites.net"; // Replace with your real Azure FastAPI URL
+  : "https://data-api-sharice.azurewebsites.net";
+
 
 export default function Data() {
   useTitle("Data | Data Portal");
