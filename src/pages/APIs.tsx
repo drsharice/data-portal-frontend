@@ -12,7 +12,7 @@ interface APIView {
 
 const baseUrl = import.meta.env.DEV
   ? "http://localhost:8000"
-  : "https://data-api-sharice.azurewebsites.net";
+  : "https://data-api-sharice-b3daawbufhemgaay.eastus2-01.azurewebsites.net";
 
 
 export default function APIs() {
